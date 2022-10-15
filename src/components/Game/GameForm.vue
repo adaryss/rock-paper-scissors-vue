@@ -23,6 +23,9 @@
 					{{ isResetFuntionEnabled ? 'Choose new players' : 'Play'}}
 				</button>
 			</div>
+			<div v-if="noAvailablePlayers" class="container text-center">
+				<span class="badge text-bg-warning">No more available players :(</span>
+			</div>
 		</div>
 	</form>
 	<div v-if="enableClearStorage" class="row justify-content-center my-2">
@@ -52,6 +55,7 @@ export default {
 		winner: String,
 		isResetFuntionEnabled: Boolean,
 		enableClearStorage: Boolean,
+		noAvailablePlayers: Boolean,
 	},
 	components: { PlayerSelect, RunsInfo, ResultBadge, ClearStorageButton },
 };

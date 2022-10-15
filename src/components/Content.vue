@@ -12,10 +12,12 @@
 			<div class="container" v-if="availablePlayers !== null && playersState.error === null">
 				<GameForm v-model:firstSelectValue="firstSelectValue" v-model:secondSelectValue="secondSelectValue"
 					:availablePlayers="availablePlayers" :submitForm="isResetFuntionEnabled ? resetForm : submitForm"
-					:secondSelectPlayers="secondSelectPlayers" :disabledFirstSelect="disabledFirstSelect"
-					:disabledSecondSelect="disabledSecondSelect" :disabledSubmit="disabledSubmit"
+					:secondSelectPlayers="secondSelectPlayers"
+					:disabledFirstSelect="disabledFirstSelect || noAvailablePlayers"
+					:disabledSecondSelect="disabledSecondSelect || noAvailablePlayers" :disabledSubmit="disabledSubmit"
 					:inProgressGame="inProgressGame" :currRunsResults="currRunsResults" :winner="winner"
-					:isResetFuntionEnabled="isResetFuntionEnabled" :enableClearStorage="enableClearStorage" />
+					:isResetFuntionEnabled="isResetFuntionEnabled" :enableClearStorage="enableClearStorage"
+					:noAvailablePlayers="noAvailablePlayers" />
 			</div>
 		</div>
 		<div class="container d-flex flex-column align-self-end">
@@ -46,6 +48,7 @@ export default {
 		const secondSelectValue = ref(formStateInitValues.secondSelectValue);
 		const secondSelectPlayers = ref(formStateInitValues.secondSelectOptions);
 		const winner = ref(formStateInitValues.winner);
+		const noAvailablePlayers = ref(false);
 
 		const disabledSubmit = ref(formStateInitValues.disabledSubmit);
 		const disabledFirstSelect = ref(formStateInitValues.disabledFirstSelect);
@@ -91,7 +94,9 @@ export default {
 				const filteredPlayers = players.value.filter((player) => {
 					return player.completedGames.length !== numOfAllPlayers - 1;
 				});
-
+				if (filteredPlayers.length === 0) {
+					noAvailablePlayers.value = true;
+				}
 				availablePlayers.value = filteredPlayers;
 			}
 		});
@@ -270,6 +275,7 @@ export default {
 			isResetFuntionEnabled,
 			players,
 			enableClearStorage,
+			noAvailablePlayers,
 		};
 	},
 };
