@@ -11,7 +11,8 @@
 
 			<div class="container" v-if="availablePlayers !== null && playersState.error === null">
 				<GameForm v-model:firstSelectValue="firstSelectValue" v-model:secondSelectValue="secondSelectValue"
-					:availablePlayers="availablePlayers" :submitForm="isResetFuntionEnabled ? resetForm : submitForm"
+					:availablePlayers="availablePlayers"
+					:submitForm="isResetFuntionEnabled ? handleResetForm : handleSubmitForm"
 					:secondSelectPlayers="secondSelectPlayers"
 					:disabledFirstSelect="disabledFirstSelect || noAvailablePlayers"
 					:disabledSecondSelect="disabledSecondSelect || noAvailablePlayers" :disabledSubmit="disabledSubmit"
@@ -32,11 +33,10 @@ import Results from "@/components/Results/Results.vue";
 import GameForm from "@/components/Game/GameForm.vue";
 import { getPlayers } from "@/api/getPlayers";
 import { computed, onMounted, ref, watch, watchEffect } from "vue";
-import { playSingleGame } from "@/utils/game";
-import { getWinnerAndLoserIds } from '@/utils/getWinnerAndLoserIds';
 import { formStateInitValues } from '@/constants/formStateInitValues';
 import { LOCAL_STORAGE_KEYS } from '@/constants/localStorageKeys';
-import { hasExistingStorageKey, updateStoragePlayersData, syncPlayersWithStorage } from '@/utils/localStorage';
+import { hasExistingStorageKey, syncPlayersWithStorage } from '@/utils/localStorage';
+import { submitForm, resetForm, updatePlayersData } from '@/utils/form';
 
 export default {
 	name: "PageContent",
@@ -101,55 +101,6 @@ export default {
 			}
 		});
 
-		const submitForm = () => {
-			const results = playSingleGame();
-
-			inProgressGame.value.results = [
-				...inProgressGame.value.results,
-				{
-					[firstSelectValue.value]: {
-						item: results.firstPlayerItem.name,
-						win: results.firstPlayerItem.winner,
-					},
-					[secondSelectValue.value]: {
-						item: results.secondPlayerItem.name,
-						win: results.secondPlayerItem.winner,
-					},
-				},
-			];
-
-			if (inProgressGame.value.rounds === 0) {
-				disabledFirstSelect.value = true;
-				disabledSecondSelect.value = true;
-
-				inProgressGame.value.players = [
-					firstSelectValue.value,
-					secondSelectValue.value,
-				];
-				inProgressGame.value.rounds = 1;
-			} else {
-				inProgressGame.value.rounds++;
-			}
-
-		};
-
-		const resetForm = () => {
-			inProgressGame.value.players = formStateInitValues.gamePlayers;
-			inProgressGame.value.rounds = formStateInitValues.gameRounds;
-			inProgressGame.value.results = formStateInitValues.gameResults;
-
-			firstSelectValue.value = formStateInitValues.firstSelectValue;
-			secondSelectValue.value = formStateInitValues.secondSelectValue;
-			winner.value = formStateInitValues.winner;
-
-			disabledSubmit.value = formStateInitValues.disabledSubmit;
-			disabledFirstSelect.value = formStateInitValues.disabledFirstSelect;
-			disabledSecondSelect.value = formStateInitValues.disabledSecondSelect;
-			secondSelectPlayers.value = formStateInitValues.secondSelectOptions;
-
-			isResetFuntionEnabled.value = formStateInitValues.isReset;
-		}
-
 		const currRunsResults = computed(() => {
 			return {
 				firstPlayer: inProgressGame.value.results.map(
@@ -161,65 +112,15 @@ export default {
 			};
 		});
 
-		const updatePlayersData = (gameInfo, firstSelectValue, secondSelectValue) => {
-			const { winnerId, loserId } = getWinnerAndLoserIds(gameInfo);
-
-			const updatedData = players.value.map((player) => {
-				if (player.id === parseInt(firstSelectValue)) {
-					const storageData = { completedGames: [], victories: [] };
-					const completedGames = [
-						...player.completedGames,
-						secondSelectValue,
-					];
-					player.completedGames = completedGames;
-					storageData.completedGames = completedGames;
-
-					if (parseInt(winnerId) === player.id) {
-						const victories = [
-							...player.victories,
-							loserId,
-						];
-						player.victories = victories;
-						storageData.victories = victories;
-					}
-
-					updateStoragePlayersData(player.id, storageData);
-				}
-
-				if (player.id === parseInt(secondSelectValue)) {
-					const storageData = { completedGames: [], victories: [] };
-					const completedGames = [
-						...player.completedGames,
-						firstSelectValue,
-					];
-					player.completedGames = completedGames;
-					storageData.completedGames = completedGames;
-
-					if (parseInt(winnerId) === player.id) {
-						const victories = [
-							...player.victories,
-							loserId,
-						];
-						player.victories = victories;
-						storageData.victories = victories;
-					}
-
-					updateStoragePlayersData(player.id, storageData);
-				}
-				return player;
-			});
-
-			players.value = updatedData;
-			winner.value = winnerId;
-		};
-
 		// Handling 3 rounds matches
 		watchEffect(() => {
 			if (inProgressGame.value.rounds === 3) {
 				updatePlayersData(
-					inProgressGame.value,
-					firstSelectValue.value,
-					secondSelectValue.value
+					inProgressGame,
+					players,
+					firstSelectValue,
+					secondSelectValue,
+					winner
 				);
 				isResetFuntionEnabled.value = true;
 				enableClearStorage.value = hasExistingStorageKey(LOCAL_STORAGE_KEYS.playersGamesData);
@@ -258,11 +159,35 @@ export default {
 			}
 		});
 
+		const handleResetForm = () => {
+			resetForm(
+				inProgressGame,
+				firstSelectValue,
+				secondSelectValue,
+				winner,
+				disabledSubmit,
+				disabledFirstSelect,
+				disabledSecondSelect,
+				secondSelectPlayers,
+				isResetFuntionEnabled
+			);
+		}
+
+		const handleSubmitForm = () => {
+			submitForm(
+				inProgressGame,
+				firstSelectValue,
+				secondSelectValue,
+				disabledFirstSelect,
+				disabledSecondSelect
+			);
+		}
+
 		return {
 			playersState,
 			availablePlayers,
-			submitForm,
-			resetForm,
+			handleSubmitForm,
+			handleResetForm,
 			firstSelectValue,
 			secondSelectValue,
 			secondSelectPlayers,
