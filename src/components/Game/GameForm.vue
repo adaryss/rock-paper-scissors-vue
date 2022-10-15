@@ -25,12 +25,17 @@
 			</div>
 		</div>
 	</form>
+	<div v-if="enableClearStorage" class="row justify-content-center my-2">
+		<ClearStorageButton />
+	</div>
 </template>
 
 <script>
 import PlayerSelect from "./PlayerSelect.vue";
 import RunsInfo from "./RunsInfo.vue";
 import ResultBadge from "./ResultBadge.vue";
+import ClearStorageButton from "./ClearStorageButton.vue";
+
 export default {
 	name: "GameForm",
 	props: {
@@ -46,7 +51,8 @@ export default {
 		secondSelectValue: String,
 		winner: String,
 		isResetFuntionEnabled: Boolean,
+		enableClearStorage: Boolean,
 	},
-	components: { PlayerSelect, RunsInfo, ResultBadge },
+	components: { PlayerSelect, RunsInfo, ResultBadge, ClearStorageButton },
 };
 </script>

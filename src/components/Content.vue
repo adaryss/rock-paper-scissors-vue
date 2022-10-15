@@ -15,7 +15,7 @@
 					:secondSelectPlayers="secondSelectPlayers" :disabledFirstSelect="disabledFirstSelect"
 					:disabledSecondSelect="disabledSecondSelect" :disabledSubmit="disabledSubmit"
 					:inProgressGame="inProgressGame" :currRunsResults="currRunsResults" :winner="winner"
-					:isResetFuntionEnabled="isResetFuntionEnabled" />
+					:isResetFuntionEnabled="isResetFuntionEnabled" :enableClearStorage="enableClearStorage" />
 			</div>
 		</div>
 		<div class="container d-flex flex-column align-self-end">
@@ -25,14 +25,16 @@
 </template>
 
 <script>
-import Title from "./Title.vue";
-import Results from "./Results/Results.vue";
-import GameForm from "./Game/GameForm.vue";
+import Title from "@/components/Title.vue";
+import Results from "@/components/Results/Results.vue";
+import GameForm from "@/components/Game/GameForm.vue";
 import { getPlayers } from "@/api/getPlayers";
 import { computed, onMounted, ref, watch, watchEffect } from "vue";
 import { playSingleGame } from "@/utils/game";
 import { getWinnerAndLoserIds } from '@/utils/getWinnerAndLoserIds';
 import { formStateInitValues } from '@/constants/formStateInitValues';
+import { LOCAL_STORAGE_KEYS } from '@/constants/localStorageKeys';
+import { hasExistingStorageKey, updateStoragePlayersData, syncPlayersWithStorage } from '@/utils/localStorage';
 
 export default {
 	name: "PageContent",
@@ -55,6 +57,7 @@ export default {
 			rounds: formStateInitValues.gameRounds,
 			results: formStateInitValues.gameResults,
 		});
+		const enableClearStorage = ref(false);
 		const { playersState, loadPlayers } = getPlayers();
 
 		// Call players API
@@ -62,18 +65,22 @@ export default {
 			try {
 				playersState.isLoading = true;
 				const res = await loadPlayers();
-				players.value = res.data.map((player) => {
+				const extendedPlayersData = res.data.map((player) => {
 					return {
 						...player,
 						victories: [],
 						completedGames: [],
 					};
 				});
+				const playersSyncedWithStorage = syncPlayersWithStorage(extendedPlayersData);
+
+				players.value = playersSyncedWithStorage;
 			} catch (err) {
 				playersState.error = err;
 				console.error(err);
 			} finally {
 				playersState.isLoading = false;
+				enableClearStorage.value = hasExistingStorageKey(LOCAL_STORAGE_KEYS.playersGamesData);
 			}
 		});
 
@@ -154,30 +161,45 @@ export default {
 
 			const updatedData = players.value.map((player) => {
 				if (player.id === parseInt(firstSelectValue)) {
-					player.completedGames = [
+					const storageData = { completedGames: [], victories: [] };
+					const completedGames = [
 						...player.completedGames,
 						secondSelectValue,
 					];
+					player.completedGames = completedGames;
+					storageData.completedGames = completedGames;
 
 					if (parseInt(winnerId) === player.id) {
-						player.victories = [
+						const victories = [
 							...player.victories,
 							loserId,
-						]
+						];
+						player.victories = victories;
+						storageData.victories = victories;
 					}
+
+					updateStoragePlayersData(player.id, storageData);
 				}
+
 				if (player.id === parseInt(secondSelectValue)) {
-					player.completedGames = [
+					const storageData = { completedGames: [], victories: [] };
+					const completedGames = [
 						...player.completedGames,
 						firstSelectValue,
 					];
+					player.completedGames = completedGames;
+					storageData.completedGames = completedGames;
 
 					if (parseInt(winnerId) === player.id) {
-						player.victories = [
+						const victories = [
 							...player.victories,
 							loserId,
-						]
+						];
+						player.victories = victories;
+						storageData.victories = victories;
 					}
+
+					updateStoragePlayersData(player.id, storageData);
 				}
 				return player;
 			});
@@ -195,6 +217,7 @@ export default {
 					secondSelectValue.value
 				);
 				isResetFuntionEnabled.value = true;
+				enableClearStorage.value = hasExistingStorageKey(LOCAL_STORAGE_KEYS.playersGamesData);
 			}
 		});
 
@@ -246,6 +269,7 @@ export default {
 			winner,
 			isResetFuntionEnabled,
 			players,
+			enableClearStorage,
 		};
 	},
 };
